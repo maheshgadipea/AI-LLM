@@ -1,0 +1,102 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: roberta-large
+  namespace: ns1
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 0
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: roberta-large
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: roberta-large
+    spec:
+      containers:
+        image: mosaiccloudacr.azurecr.io/mosaic-ai-logistics/mosaic-notebooks-manager/jupyter/3.8:robertaimage
+        imagePullPolicy: Always
+        name: roberta-large
+        ports:
+        - containerPort: 8080
+          protocol: TCP
+        resources:
+          limits:
+            memory: 32Gi
+            nvidia.com/gpu: "1"
+          requests:
+            memory: 300Mi
+            nvidia.com/gpu: "1"
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      nodeSelector: 
+        node.kubernetes.io/instance-type: Standard_NC24ads_A100_v4
+      tolerations:
+      - effect: NoSchedule
+        key: model_type
+        operator: Equal
+        value: gpu_enabled
+      imagePullSecrets:
+      - name: gitlab
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+
+---
+
+### Service.yaml
+# service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: roberta-large-service
+spec:
+  selector:
+    app: roberta-large
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8000
+  type: ClusterIP
+
+---
+
+### Ingress.yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: nginx
+  labels:
+    app: roberta-large
+  name: ing-openllm
+  namespace: ns1
+spec:
+  rules:
+  - host: refract.fosfor.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: roberta-large-service
+            port:
+              number: 80
+        path: /model/generate
+        pathType: Prefix
+
+status:
+  loadBalancer:
+    ingress:
+    - ip: 10.30.0.4
+    - ip: 10.30.1.100
+
