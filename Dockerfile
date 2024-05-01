@@ -1,5 +1,12 @@
 FROM python:3.10
 
+RUN mkdir -p /app/model && \
+    mkdir -p /app/api_server && \
+    chmod -R 777 /app/api_server && \
+    chmod -R 777 /app/model
+
+ADD roberta_large.tar.gz /app/model/
+
 COPY api_server /app/api_server
 
 ## OS configurations

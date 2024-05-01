@@ -13,7 +13,7 @@ class ModelTemplate():
     """    
     def __init__(self):
         self.model_loaded = None
-        self.model_name ="/app/"
+        self.model_name ="/app/model"
         self.tokenizer_name ="roberta-large"
         self.loaded_dict ={11: 'kda_transactional',45: 'when_delta_on_share',48: 'when_share',
          25: 'topn_correlation',
