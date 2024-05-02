@@ -23,8 +23,6 @@ spec:
     spec:
       containers:
       - env:
-        - name: CONTEXT_PATH
-          value: /vllm/roberta
         image: mosaiccloudacr.azurecr.io/mosaic-ai-logistics/mosaic-notebooks-manager/jupyter/3.8:v2
         imagePullPolicy: Always
         name: roberta-large
