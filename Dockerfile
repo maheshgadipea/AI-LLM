@@ -5,7 +5,7 @@ RUN mkdir -p /app/model && \
     chmod -R 777 /app/api_server && \
     chmod -R 777 /app/model
 
-ADD roberta_large.tar.gz /app/model/
+ADD MODEL_APR_26 /app/model/
 
 COPY api_server /app/api_server
 
@@ -20,6 +20,7 @@ RUN python -m pip install pip --upgrade && \
               pip install "fastapi[all]" h5py
 
 RUN pip install tensorflow transformers torch
+RUN pip install tf_keras
 
 WORKDIR  /app/api_server
 
