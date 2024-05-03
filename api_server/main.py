@@ -9,8 +9,9 @@ model = None
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global model
-    model_path = os.getenv("MODEL_PATH")
-    model = ModelTemplate(model_path=model_path)
+    model = ModelTemplate(model_path=os.getenv("MODEL_PATH").strip(),
+                          adapter_path=os.getenv("ADAPTER_PATH").strip(),
+                          adapter_name=os.getenv("ADAPTER_NAME").strip())
     yield
 
 app = FastAPI(lifespan=lifespan)

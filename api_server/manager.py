@@ -12,11 +12,14 @@ class ModelTemplate():
     """
     This Class Demonstrate How To Implements ScoreBase Interface Class And It Basic Usage.
     """    
-    def __init__(self,model_path):
+    def __init__(self,model_path,adapter_path,adapter_name):
         self.model_name = model_path
         self.loaded_tokenizer = AutoTokenizer.from_pretrained(self.model_name)
         self.loaded_model = AutoModelForSequenceClassification.from_pretrained(self.model_name)
+        self.loaded_model.load_adapter(adapter_path)
+        self.loaded_model.set_adapter(adapter_name)
         self.loaded_model.to("cuda")
+        
         
     
     def generate_prompt(self,
@@ -30,6 +33,6 @@ class ModelTemplate():
             ]
         encoders = self.loaded_tokenizer.apply_chat_template(messages,return_tensors="pt")
         model_inputs = encoders.to("cuda")
-        generated_ids = self.loaded_model.generate(model_inputs,max_new_tokens=1000,do_sample=True)
+        generated_ids = self.loaded_model.generate(model_inputs,max_new_tokens=100,do_sample=True)
         decoded = self.loaded_tokenizer.batch_decode(generated_ids)
         return re.sub(r"<s>\s*|\[INST\].*?\[/INST\]|</s>","",decoded[0])
