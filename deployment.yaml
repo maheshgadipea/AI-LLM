@@ -5,7 +5,7 @@ metadata:
   namespace: ns1
 spec:
   progressDeadlineSeconds: 600
-  replicas: 0
+  replicas: 1
   revisionHistoryLimit: 10
   selector:
     matchLabels:
@@ -25,7 +25,11 @@ spec:
       - env:
         - name: MODEL_PATH
           value: /llmmodels/NLG_FINETUNEDMODELS/DATASET_MODELS/FINETUNED_MISTRALV2_V5/MISTRAL_MERGED_MODEL_JAN30_V3_0021
-        image: mosaiccloudacr.azurecr.io/mosaic-ai-logistics/mosaic-notebooks-manager/jupyter/3.8:mistral_ai
+        - name: ADAPTER_PATH
+          value: /llmmodels/openllm/adapter1
+        - name: ADAPTER_NAME
+          value: NLG
+        image: mosaiccloudacr.azurecr.io/mosaic-ai-logistics/mosaic-notebooks-manager/jupyter/3.8:mistral_ai_v3
         imagePullPolicy: Always
         name: mistral-ai-llm
         livenessProbe:
