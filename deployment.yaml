@@ -25,9 +25,18 @@ spec:
       - env:
         - name: MODEL_PATH
           value: /llmmodels/NLG_FINETUNEDMODELS/DATASET_MODELS/FINETUNED_MISTRALV2_V5/MISTRAL_MERGED_MODEL_JAN30_V3_0021
-        image: mosaiccloudacr.azurecr.io/mosaic-ai-logistics/mosaic-notebooks-manager/jupyter/3.8:v2
+        image: mosaiccloudacr.azurecr.io/mosaic-ai-logistics/mosaic-notebooks-manager/jupyter/3.8:mistral_ai
         imagePullPolicy: Always
         name: mistral-ai-llm
+        livenessProbe:
+          exec:
+            command:
+            - nvidia-smi
+          failureThreshold: 3
+          initialDelaySeconds: 300
+          periodSeconds: 300
+          successThreshold: 1
+          timeoutSeconds: 60
         ports:
         - containerPort: 8080
           protocol: TCP
@@ -40,6 +49,9 @@ spec:
             nvidia.com/gpu: "1"
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /llmmodels
+          name: llm-pvc
       dnsPolicy: ClusterFirst
       nodeSelector: 
         node.kubernetes.io/instance-type: Standard_NC24ads_A100_v4
@@ -54,7 +66,10 @@ spec:
       schedulerName: default-scheduler
       securityContext: {}
       terminationGracePeriodSeconds: 30
-
+      volumes:
+      - name: llm-pvc
+        persistentVolumeClaim:
+          claimName: llm-pvc
 ---
 
 ### Service.yaml
