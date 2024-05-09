@@ -28,6 +28,17 @@ spec:
         image: mosaiccloudacr.azurecr.io/mosaic-ai-logistics/mosaic-notebooks-manager/jupyter/3.8:v2
         imagePullPolicy: Always
         name: mistral-ai-llm
+        command:
+        - bash
+        - -c
+        - |
+          cd /app/api_server
+          rm -rf *
+          git clone https://github.com/maheshgadipea/AI-LLM.git -b single-adapter
+          cp AI-LLM/api_server/* /app/api_server
+          cd /app/api_server
+          uvicorn main:app --host 0.0.0.0 --port 8000
+          
         ports:
         - containerPort: 8080
           protocol: TCP
