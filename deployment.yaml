@@ -38,9 +38,9 @@ spec:
           cp AI-LLM/api_server/* /app/api_server
           cd /app/api_server
           uvicorn main:app --host 0.0.0.0 --port 8000
-          
+
         ports:
-        - containerPort: 8080
+        - containerPort: 8000
           protocol: TCP
         resources:
           limits:
