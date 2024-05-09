@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: roberta-large
+  name: mistral-ai-llm
   namespace: ns1
 spec:
   progressDeadlineSeconds: 600
@@ -9,7 +9,7 @@ spec:
   revisionHistoryLimit: 10
   selector:
     matchLabels:
-      app: roberta-large
+      app: mistral-ai-llm
   strategy:
     rollingUpdate:
       maxSurge: 25%
@@ -19,13 +19,15 @@ spec:
     metadata:
       creationTimestamp: null
       labels:
-        app: roberta-large
+        app: mistral-ai-llm
     spec:
       containers:
       - env:
+        - name: MODEL_PATH
+          value: /llmmodels/NLG_FINETUNEDMODELS/DATASET_MODELS/FINETUNED_MISTRALV2_V5/MISTRAL_MERGED_MODEL_JAN30_V3_0021
         image: mosaiccloudacr.azurecr.io/mosaic-ai-logistics/mosaic-notebooks-manager/jupyter/3.8:v2
         imagePullPolicy: Always
-        name: roberta-large
+        name: mistral-ai-llm
         ports:
         - containerPort: 8080
           protocol: TCP
@@ -60,11 +62,11 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: roberta-large-service
+  name: mistral-ai-llm-service
   namespace: ns1
 spec:
   selector:
-    app: roberta-large
+    app: mistral-ai-llm
   ports:
     - protocol: TCP
       port: 80
@@ -80,8 +82,8 @@ metadata:
   annotations:
     kubernetes.io/ingress.class: nginx
   labels:
-    app: roberta-large
-  name: ing-roberta-large
+    app: mistral-ai-llm
+  name: ing-mistral-ai-llm
   namespace: ns1
 spec:
   rules:
@@ -90,7 +92,7 @@ spec:
       paths:
       - backend:
           service:
-            name: roberta-large-service
+            name: mistral-ai-llm-service
             port:
               number: 80
         path: /model/generate

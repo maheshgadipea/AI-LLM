@@ -2,13 +2,14 @@ from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from fastapi import HTTPException
 from  manager import ModelTemplate
+import os
 
 model = None
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global model
-    model = ModelTemplate()
+    model = ModelTemplate(model_path=os.getenv("MODEL_PATH").strip())
     yield
 
 app = FastAPI(lifespan=lifespan)
@@ -25,7 +26,11 @@ async def process_data(request: Request):
         if not prompt:
             raise HTTPException(status_code=400, detail="Missing 'prompt' in request")
         
-        result = model.prediction_fn(prompt) 
+        # adapter_name = request_data.get("adapter_name")
+        # if not adapter_name:
+        #     raise HTTPException(status_code=400, detail="Missing 'adapter_name' in request")
+        
+        result = model.generate_prompt(prompt) 
         return result 
 
     except KeyError: 
