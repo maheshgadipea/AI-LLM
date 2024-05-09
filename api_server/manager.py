@@ -15,6 +15,7 @@ class ModelTemplate():
     def __init__(self,model_path):        
         self.loaded_model = AutoModelForCausalLM.from_pretrained(model_path)
         self.loaded_tokenizer = AutoTokenizer.from_pretrained(model_path)
+        self.loaded_model.to("cuda")
         
     def generate_prompt(self,
                       input_query
