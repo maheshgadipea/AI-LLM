@@ -1,0 +1,39 @@
+With NGC CLI Token Normal
+
+a. Using Org: ohlfw0olaadg , Team: ea-participants
+
+
+starcoder2_15b
+
+
+  inflating: ngc-cli/opentelemetry/util/__pycache__/types.cpython-39.pyc
+  inflating: ngc-cli/opentelemetry/util/_importlib_metadata.py
+  inflating: ngc-cli/opentelemetry/util/_providers.py
+  inflating: ngc-cli/opentelemetry/util/re.py
+  inflating: ngc-cli/opentelemetry/util/types.py
+ extracting: ngc-cli.md5
+Directory is /model-store/StarCoder2-15B_v1
+Error: 'ohlfw0olaadg/ea-participants/StarCoder2-15B:1' could not be found.
+CLI_VERSION: Latest - 3.42.0 available (current: 3.34.1). Please update by using the command 'ngc version upgrade'
+
+
+b. Using Org : Nvidia, Team : Nemo
+  inflating: ngc-cli/opentelemetry/util/_providers.py
+  inflating: ngc-cli/opentelemetry/util/re.py
+  inflating: ngc-cli/opentelemetry/util/types.py
+ extracting: ngc-cli.md5
+Directory is /model-store/StarCoder2-15B_v1
+Client Error: 403 Response: Access Denied - Request Id: 8fe06e57-822439 Url: https://api.ngc.nvidia.com/v2/org/nvidia/team/nemo/models/StarCoder2-15B/versions/1
+CLI_VERSION: Latest - 3.42.0 available (current: 3.34.1). Please update by using the command 'ngc version upgrade'
+
+
+=================================================
+
+With NGC CLI Token to access AI Models
+
+  inflating: ngc-cli/opentelemetry/util/_providers.py
+  inflating: ngc-cli/opentelemetry/util/re.py
+  inflating: ngc-cli/opentelemetry/util/types.py
+ extracting: ngc-cli.md5
+Directory is /model-store/StarCoder2-15B_v1
+Error: Invalid apikey

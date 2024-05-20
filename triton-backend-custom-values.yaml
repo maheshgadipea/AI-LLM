@@ -1,0 +1,88 @@
+initContainers:
+  ngcInit:
+    imageName: nvcr.io/ohlfw0olaadg/ea-participants/nim_llm
+    imageTag: 24.02
+    secretName: ngc-api
+    env:
+      STORE_MOUNT_PATH: /model-store
+      NGC_CLI_ORG: ohlfw0olaadg
+      NGC_CLI_TEAM: ea-participants
+      NGC_MODEL_NAME: llama2-13b-chat
+      NGC_MODEL_VERSION: a100x2_fp16_24.02
+      NGC_EXE: ngc
+      DOWNLOAD_NGC_CLI: "true"
+      NGC_CLI_VERSION: "3.34.1"
+      MODEL_NAME: llama2-13b-chat
+
+image:
+  repository: nvcr.io/ohlfw0olaadg/ea-participants/nim_llm
+  tag: 24.02
+
+imagePullSecrets:
+  - name: registry-secret
+
+model:
+  numGpus: 2
+  name: llama2-13b-chat
+  openai_port: 9999
+  # The subpath is the NGC_MODEL_NAME from above, _v and then the NGC_MODEL_VERSION from above
+  subPath: "llama2-13b-chat_va100x2_fp16_24.02"
+
+persistence:
+  enabled: true
+  annotations:
+    helm.sh/resource-policy: keep
+
+podSecurityContext:
+  runAsGroup: 1000
+  runAsUser: 1000
+  fsGroup: 1000
+
+# env:
+#   - name: CUDA_VISIBLE_DEVICES
+#     value: "0"
+#   - name: WORLD_SIZE
+#     value: "1"
+
+livenessProbe:
+  failureThreshold: 4
+  httpGet:
+    path: /v1/health/live 
+    scheme: HTTP
+    port: 8080
+  periodSeconds: 10
+  initialDelaySeconds: 100
+  timeoutSeconds: 30
+
+startupProbe:
+  failureThreshold: 4
+  httpGet:
+    path: /v1/health/ready 
+    scheme: HTTP
+    port: 8080
+  periodSeconds: 10
+  initialDelaySeconds: 100
+  timeoutSeconds: 30
+
+readinessProbe:
+  failureThreshold: 4
+  httpGet:
+    path: /v1/health/ready 
+    scheme: HTTP
+    port: 8080
+  periodSeconds: 10
+  initialDelaySeconds: 100
+  timeoutSeconds: 30
+
+resources:
+  limits:
+    nvidia.com/gpu: 2
+
+tolerations:
+  - key: "model_type"
+    operator: "Equal"
+    value: "gpu_enabled"
+    effect: "NoSchedule"
+
+nodeSelector:
+  beta.kubernetes.io/instance-type: Standard_NC48ads_A100_v4

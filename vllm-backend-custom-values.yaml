@@ -1,0 +1,105 @@
+# Since you cannot use the included NGC init container if downloading from Huggingface (for example), you need to provide an init container like so
+initContainers:
+  extraInit:
+    - name: git-clone
+      image: bitnami/git:latest
+      env:
+        - name: HOME
+          value: /tmp
+        - name: HF_PAT
+          valueFrom:
+            secretKeyRef:
+              name: hf-pat
+              key: HF_PAT
+        - name: HF_USER
+          valueFrom:
+            secretKeyRef:
+              name: hf-pat
+              key: username
+      command:
+      - /bin/sh
+      - -c
+      - |
+        set -eo
+        if [ -f /model-store/.ready ]; then
+          rm -f /model-store/.ready
+        fi
+        if [ -d /model-store/model ]; then
+          rm -rf /model-store/model
+        fi
+
+
+        cd /model-store
+        mkdir -p model
+        chmod -R 777 model
+
+        git lfs install
+        git clone https://$HF_USER:$HF_PAT@huggingface.co/microsoft/phi-2 /model-store/model/
+        cat << EOF > /model-store/model_config.yaml
+        engine:
+          model: /model-store/model/
+          enforce_eager: false
+          max_context_len_to_capture: 8192
+          max_num_seqs: 256
+          dtype: float16
+        EOF
+        touch /model-store/.ready
+      volumeMounts:
+      - name: model-store
+        mountPath: /model-store
+
+env:
+  - name: HF_HOME
+    value: /tmp/.cache
+
+image:
+  repository: nvcr.io/ohlfw0olaadg/ea-participants/nim_llm
+  tag: 24.02-day0
+
+imagePullSecrets:
+  - name: registry-secret
+
+customCommand:
+  - nim_vllm
+  - --model_name
+  - phi-2
+  - --model_config
+  - /model-store/model_config.yaml
+
+model:
+  subPath: .
+  openai_port: 9999
+  nemo_port: 9998
+  name: phi-2
+
+# Using uid 1000 is a good idea even when not required
+podSecurityContext:
+  runAsGroup: 1000
+  runAsUser: 1000
+  fsGroup: 1000
+
+metrics:
+  enabled: true
+
+# In this example, we are using a Persistent Volume Claim
+persistence:
+  enabled: true
+  size: 100Gi
+
+resources:
+  requests:
+    nvidia.com/gpu: 1
+  limits:
+    nvidia.com/gpu: 1
+
+nodeSelector:
+  model_type: gpu_enabled
+
+tolerations:
+  - key: "model_type"
+    operator: "Equal"
+    value: "gpu_enabled"
+    effect: "NoSchedule"
+
+nodeSelector:
+  node.kubernetes.io/instance-type: Standard_NC24ads_A100_v4
