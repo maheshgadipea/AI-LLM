@@ -1,0 +1,8 @@
+instructions:
+  - type: general
+    content: |
+      You are an AI assistant that supports FDC copilot queries
+rails:
+  dialog:
+    user_messages:
+      embeddings_only: True
