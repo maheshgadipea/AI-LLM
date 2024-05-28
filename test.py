@@ -30,3 +30,5 @@ except Exception as msg:
 
 
 ### HF_TOKEN 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
+
+## zqiseam-ltifosforscsaws.registry.snowflakecomputing.com/nvidia_db/nvidia_schema/nvidia_image_repo
