@@ -1,0 +1,97 @@
+spec:
+  containers:
+  - name: spec-ai-llm-triton-server
+    image: zqiseam-ltifosforscsaws.registry.snowflakecomputing.com/nvidia_db/nvidia_schema/nvidia_image_repo/triton:24.04-trtllm-python-py3
+    env:
+      HF_MODEL_PATH: /model/merged_mistralai_model
+      HF_MODEL_NAME: Magic-Coder
+    command:
+      - bash
+      - -c
+      - |
+        ##  install python packags
+        echo "Installing pytohon packages .."
+        pip install protobuf SentencePiece torch
+        pip install transformers peft
+        echo  "Package installation completed !! :D"
+
+        ### Get Merged Model
+        python /model/get_merged_model.py
+        echo "Merged model recieved successfully.. :)"
+
+        echo "Step 1: Defining folder path and version"
+        TENSORRT_BACKEND_LLM_VERSION=v0.9.0
+        TENSORRT_DIR="/tensorrt/$TENSORRT_BACKEND_LLM_VERSION"
+
+        [ ! -d "$TENSORRT_DIR" ] && mkdir -p "$TENSORRT_DIR"
+        cd "$TENSORRT_DIR" || { echo "Failed to change directory to $TENSORRT_DIR"; exit 1; }
+
+        git clone -b "$TENSORRT_BACKEND_LLM_VERSION" https://github.com/triton-inference-server/tensorrtllm_backend.git --progress --verbose || { echo "Failed to clone repository"; exit 1; }
+
+        cd "$TENSORRT_DIR"/tensorrtllm_backend || { echo "Failed to change directory to $TENSORRT_DIR/tensorrtllm_backend"; exit 1; }
+        git submodule update --init --recursive || { echo "Failed to update submodules"; exit 1; }
+
+        git lfs install || { echo "Failed to install Git LFS"; exit 1; }
+        git lfs pull || { echo "Failed to pull Git LFS files"; exit 1; }
+
+
+        # Step 3: Enter the backend folder and Install backend related dependencies
+        echo "Step 3: Enter the backend folder and Install backend related dependencies"
+        cd "$TENSORRT_DIR"/tensorrtllm_backend || { echo "Failed to change directory to $TENSORRT_DIR/tensorrtllm_backend"; exit 1; }
+        apt-get update && apt-get install -y --no-install-recommends rapidjson-dev python-is-python3 || { echo "Failed to install dependencies"; exit 1; }
+        pip3 install -r requirements.txt --extra-index-url https://pypi.ngc.nvidia.com || { echo "Failed to install Python dependencies"; exit 1; }
+
+
+        # Step 4: Install tensorrt-llm library
+        echo "Step 4: Install tensorrt-llm library"
+        pip install tensorrt_llm=="$TENSORRT_BACKEND_LLM_VERSION" -U --pre --extra-index-url https://pypi.nvidia.com || { echo "Failed to install tensorrt-llm library"; exit 1; }
+
+
+        echo "Coverting $HF_MODEL_NAME to checkingpoints"
+        python /tensorrt/v0.9.0/tensorrtllm_backend/tensorrt_llm/examples/llama/convert_checkpoint.py \
+            --model_dir $HF_MODEL_PATH \
+            --output_dir /tensorrt/tensorrt-models/$HF_MODEL_NAME/v0.9.0/trt-checkpoints/fp16/1-gpu/ \
+            --dtype float16
+
+
+        
+        echo "Building TensorRT-Engine for $HF_MODEL_NAME model"
+        trtllm-build --checkpoint_dir /tensorrt/tensorrt-models/$HF_MODEL_NAME/v0.9.0/trt-checkpoints/fp16/1-gpu/ \
+            --output_dir /tensorrt/tensorrt-models/$HF_MODEL_NAME/v0.9.0/trt-engines/fp16/1-gpu/ \
+            --remove_input_padding enable \
+            --context_fmha enable \
+            --gemm_plugin float16 \
+            --max_input_len 32768 \
+            --strongly_typed
+        
+
+        echo "Creating model repo for $HF_MODEL_NAME"
+        mkdir -p  /tensorrt/triton-repos/$HF_MODEL_NAME
+        cp /tensorrt/v0.9.0/tensorrtllm_backend/all_models/inflight_batcher_llm/* /tensorrt/triton-repos/$HF_MODEL_NAME/ -r
+        cp /tensorrt/tensorrt-models/$HF_MODEL_NAME/v0.9.0/trt-engines/fp16/1-gpu/* /tensorrt/triton-repos/$HF_MODEL_NAME/tensorrt_llm/1
+
+        echo "Setting configurations for $HF_MODEL_NAME"
+        python3 /tensorrt/v0.9.0/tensorrtllm_backend/tools/fill_template.py -i /tensorrt/triton-repos/$HF_MODEL_NAME/postprocessing/config.pbtxt tokenizer_dir:$HF_MODEL_PATH,tokenizer_type:llama,triton_max_batch_size:64,postprocessing_instance_count:1
+        python3 /tensorrt/v0.9.0/tensorrtllm_backend/tools/fill_template.py -i /tensorrt/triton-repos/$HF_MODEL_NAME/preprocessing/config.pbtxt tokenizer_dir:/$HF_MODEL_PATH,tokenizer_type:llama,triton_max_batch_size:64,preprocessing_instance_count:1
+        python3 /tensorrt/v0.9.0/tensorrtllm_backend/tools/fill_template.py -i /tensorrt/triton-repos/$HF_MODEL_NAME/tensorrt_llm_bls/config.pbtxt triton_max_batch_size:64,decoupled_mode:False,bls_instance_count:1,accumulate_tokens:False
+        python3 /tensorrt/v0.9.0/tensorrtllm_backend/tools/fill_template.py -i /tensorrt/triton-repos/$HF_MODEL_NAME/ensemble/config.pbtxt triton_max_batch_size:64
+        python3 /tensorrt/v0.9.0/tensorrtllm_backend/tools/fill_template.py -i /tensorrt/triton-repos/$HF_MODEL_NAME/tensorrt_llm/config.pbtxt triton_max_batch_size:64,decoupled_mode:False,max_beam_width:1,engine_dir:/tensorrt/tensorrt-models/$HF_MODEL_NAME/v0.9.0/trt-engines/fp16/1-gpu,max_tokens_in_paged_kv_cache:2560,max_attention_window_size:2560,kv_cache_free_gpu_mem_fraction:0.9,exclude_input_in_output:True,enable_kv_cache_reuse:False,batching_strategy:inflight_batching,max_queue_delay_microseconds:600
+
+
+        ## Start the Triton Inference Server
+        echo "Starting Triton-Server for $HF_MODEL_NAME"
+        tritonserver --model-repository=/tensorrt/triton-repos/$HF_MODEL_NAME --model-control-mode=explicit --load-model=preprocessing --load-model=postprocessing --load-model=tensorrt_llm --load-model=tensorrt_llm_bls --load-model=ensemble  --log-verbose=2 --log-info=1 --log-warning=1 --log-error=1
+      
+    volumeMounts:
+    - name: "stagemount"
+      mountPath: /model
+      # type: SNOWFLAKE_SSE
+
+  endpoints:
+  - name: triton-spcs-infernece
+    port: 8000
+    public: true
+  volumes:
+  - name: "stagemount"
+    source: "@NVIDIA_MODEL_STAGE"
+
